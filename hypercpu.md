@@ -4,10 +4,9 @@ Falling - save to memory, write registers, increment pc, load new instruction, d
 
 Instructions:
 ........ ........ ........ ........ 
-oooooooo fAAAfBBB iiiiiiii iiiiiiii
+oooooooo AAAABBBB iiiiiiii iiiiiiii
 
 o - opcode
-f - unused(flags maybe?)
 A - address for register A
 B - address for register B
 i - misc immediate data
