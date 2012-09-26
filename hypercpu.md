@@ -43,10 +43,10 @@ opcode name   misc     side effect
 0b00100001 - TEST,  B=test_bit(B,A);
 
 0b010iALUO - BRNZ,  if(B)  pc=A `ALUO` x;
-0b010iALUO - BRZ,   if(!B) pc=A `ALUO` x;
+0b011iALUO - BRZ,   if(!B) pc=A `ALUO` x;
 
-0b101iALUO - LOADM, B=memory[A`ALUO`x];
-0b100iALUO - SAVEM, memory[A`ALUO`x]=B;
+0b100iALUO - LOADM, B=memory[A`ALUO`x];
+0b101iALUO - SAVEM, memory[A`ALUO`x]=B;
 
 0b110iALUO - CALL,  push(pc); pc=A `ALUO` x;
 0b111iALUO - ALU,   B=A `ALUO` x
