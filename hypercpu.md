@@ -53,8 +53,9 @@ opcode name   misc     side effect
 
 ###Aliases:
 Load immediate(B=i) -> ALUi:B=A+i where A is a register with 0 in it
-Move(B=A) -> ALUi:B=A+i, i=0
+Move(B=A) -> ALUi:B=A+i|i=0
 Return(opposite of call) -> POP:B=pc
+ALU immediate -> ALUi:B=A+i|&B=&A
 
 ###ALU op:
 0 - not B
