@@ -81,3 +81,12 @@ F - A / B
 ##Memory Map
 0x00000000 - 0x00ffffff - ROM
 0x01000000 - 0x01ffffff - RAM
+0x80000000 - 0x8fffffff - Peripherals
+	* 0x80000000 - Random number generator
+0x90000000 - 0x9fffffff - Input
+	* 0x90000000 - Keyboard
+	* 0x90000001 - Joystick
+0xA0000000 - 0xAfffffff - Output
+	* 0xA0000000 - TTY
+	* 0xA0000001 - 4 Byte Hex Display
+0xB0000000 - 0xBfffffff - Display
