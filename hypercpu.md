@@ -85,8 +85,15 @@ F - A / B
 	* 0x80000000 - Random number generator
 0x90000000 - 0x9fffffff - Input
 	* 0x90000000 - Keyboard
-	* 0x90000010 - Joystick X
-	* 0x90000011 - Joystick Y
+	* 0x9000001X - Joystick
+		* 0 - X
+		* 1 - Y
+		* 2 - L
+		* 3 - R
+		* 4 - A
+		* 5 - B
+		* 6 - C
+		* 7 - D
 0xA0000000 - 0xAfffffff - Output
 	* 0xA0000000 - TTY
 	* 0xA0000001 - 4 Byte Hex Display
