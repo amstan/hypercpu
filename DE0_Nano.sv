@@ -169,37 +169,14 @@ inout 		    [33:0]		GPIO_1;
 input 		     [1:0]		GPIO_1_IN;
 `endif
 
-//=======================================================
-//  REG/WIRE declarations
-//=======================================================
+wire MCLK;
+user_clock(.source_clock(CLOCK_50), .step(~KEY[0]), .mode(SW[1:0]), .out_clock(MCLK));
 
-
-
-
-//=======================================================
-//  Structural coding
-//=======================================================
-
-reg [31:0] counter;
-reg [7:0] LED_status;
-
-initial begin
-counter <= 32'b0;
-LED_status <= 1'b0;
+reg [7:0] counter;
+always @ (posedge MCLK) begin
+	counter <= counter + 1;
 end
 
-always @ (posedge CLOCK_50)
-begin
-counter <= counter + 1'b1;
-if (counter > 5000000)
-begin
-LED_status <= LED_status + 1;
-counter <= 32'b0;
-end
-
-
-end
-
-assign LED = LED_status;
+assign LED = counter;
 
 endmodule
