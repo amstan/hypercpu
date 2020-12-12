@@ -176,15 +176,19 @@ reg [7:0] counter;
 always @ (posedge MCLK) begin
 	counter <= counter + 1;
 end
+//assign LED = counter;
 
-genvar i;
-generate
-	for (i = 0; i < $size(LED); i++) begin : each_led
-		integer brightness, pwm_value;
-		assign brightness = (counter + 12'h20 * i) << 6;
-		assign pwm_value = (brightness * brightness) >> 12;
-		pwm(.clock(CLOCK_50), .value(pwm_value), .out(LED[i]));
-	end
-endgenerate
+// hypercpu memory bus
+wire[31:0] mem_addr;
+tri[31:0] mem_read;
+wire[31:0] mem_write;
+wire mem_write_enable;
+
+hypercpu(.mem_addr(mem_addr), .mem_read(mem_read), .mem_write(mem_write), .mem_write_enable(mem_write_enable), .mclk(MCLK), .reset(1));
+
+// Attachments to the memory bus
+hypercpu_rom(.mem_addr(mem_addr[23:0]), .mem_read(mem_read), .mem_read_enabled(mem_addr[31:24] == 8'h00));
+//assign mem_addr = counter - 2;
+assign LED = mem_read;
 
 endmodule
