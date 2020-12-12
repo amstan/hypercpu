@@ -177,6 +177,14 @@ always @ (posedge MCLK) begin
 	counter <= counter + 1;
 end
 
-assign LED = counter;
+genvar i;
+generate
+	for (i = 0; i < $size(LED); i++) begin : each_led
+		integer brightness, pwm_value;
+		assign brightness = (counter + 12'h20 * i) << 6;
+		assign pwm_value = (brightness * brightness) >> 12;
+		pwm(.clock(CLOCK_50), .value(pwm_value), .out(LED[i]));
+	end
+endgenerate
 
 endmodule
