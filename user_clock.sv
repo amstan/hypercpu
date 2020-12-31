@@ -2,6 +2,8 @@
  * Allows the user to control clock speed or single step the cpu.
  */
 
+`default_nettype none
+
 module user_clock(
 	input source_clock,
 
@@ -36,10 +38,10 @@ always @ (negedge source_clock) begin
 		out_clock <= step;
 	end else begin
 		if (i >= out_clock_divider) begin
-			i <= 1'b0;
+			i <= 32'b0;
 			out_clock <= ~out_clock;
 		end else begin
-			i <= i + 1'b1;
+			i <= i + 32'b1;
 			out_clock <= out_clock;
 		end
 	end

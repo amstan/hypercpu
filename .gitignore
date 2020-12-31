@@ -72,3 +72,5 @@ PLLJ_PLLSPE_INFO.txt
 filelist.txt
 devplatforms/
 greybox_tmp/
+
+build/

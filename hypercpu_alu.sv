@@ -11,25 +11,25 @@ module hypercpu_alu(
 );
 
 assign r =
-	(op == 'h_0) ? ~a :
-	(op == 'h_1) ? a & b :
-	(op == 'h_2) ? a | b :
-	(op == 'h_3) ? a ^ b :
+	(op == 4'h_0) ? ~a :
+	(op == 4'h_1) ? a & b :
+	(op == 4'h_2) ? a | b :
+	(op == 4'h_3) ? a ^ b :
 
-	(op == 'h_4) ? a < b :
-	(op == 'h_5) ? a > b :
-	(op == 'h_6) ? a == b :
-	(op == 'h_7) ? a != b :
+	(op == 4'h_4) ? a < b :
+	(op == 4'h_5) ? a > b :
+	(op == 4'h_6) ? a == b :
+	(op == 4'h_7) ? a != b :
 
-	(op == 'h_8) ? a << b :
-	(op == 'h_9) ? a >> b :
+	(op == 4'h_8) ? a << b :
+	(op == 4'h_9) ? a >> b :
 	//(op == 'h_a) ? :
 	//(op == 'h_b) ? :
 
-	(op == 'h_c) ? a + b :
-	(op == 'h_d) ? a - b :
-	(op == 'h_e) ? a * b :
-	(op == 'h_f) ? a / b :
+	(op == 4'h_c) ? a + b :
+	(op == 4'h_d) ? a - b :
+	(op == 4'h_e) ? a * b :
+	(op == 4'h_f) ? a / b :
 	0;
 
 endmodule

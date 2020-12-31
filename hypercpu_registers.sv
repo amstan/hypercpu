@@ -1,12 +1,13 @@
-localparam REG_COUNT = 16;
-localparam REG_BITS = $clog2(REG_COUNT);
-typedef bit[REG_BITS-1:0] register_addr;
+typedef bit[3:0] register_addr;
 
-localparam FIRST_SPECIAL_REG_ADDR = REG_COUNT - 2;
-localparam SP_ADDR                = REG_COUNT - 2;
-localparam PC_ADDR                = REG_COUNT - 1;
+module hypercpu_registers #(
+	parameter REG_COUNT = 16,
+	parameter REG_BITS = $clog2(REG_COUNT -1),
+	//parameter type  = bit[32:0],
 
-module hypercpu_registers(
+	parameter register_addr SP_ADDR = REG_BITS'(REG_COUNT - 2),
+	parameter register_addr PC_ADDR = REG_BITS'(REG_COUNT - 1)
+) (
 	// Put something in read_*_addr, get it back via read_*_data
 	input register_addr read_a_addr,
 	input register_addr read_b_addr,
@@ -36,11 +37,6 @@ assign read_b_data = registers[read_b_addr];
 assign read_sp     = registers[SP_ADDR];
 assign read_pc     = registers[PC_ADDR];
 
-// This is normally next_*, but sometimes we must overwrite them via a write request
-wire overwrite_sp = write_enable && (write_addr != SP_ADDR) ? write_data : next_sp;
-wire overwrite_pc = write_enable && (write_addr != PC_ADDR) ? write_data : next_pc;
-// TODO: is there a simpler way to do this so I don't have to special case the assignment with an if later on?
-
 always @ (negedge mclk, negedge reset) begin
 	if (!reset) begin
 		integer i;
@@ -48,16 +44,14 @@ always @ (negedge mclk, negedge reset) begin
 			registers[i] <= 0;
 		end
 	end else begin
-		if (write_enable) begin
-			if (write_addr < FIRST_SPECIAL_REG_ADDR) begin // special registers happen anyway later
-				registers[write_addr] = write_data;
-				//TODO: Can i rewrite this so it overwrites the special registers if needed so i don't need the FIRST_SPECIAL_REG_ADDR condition?
-			end
-		end
+		// Special registers always get updated through the backdoor
+		registers[SP_ADDR] <= next_sp;
+		registers[PC_ADDR] <= next_pc;
+		// but they could get overridden later by a write
 
-		// Special registers always get updated
-		registers[SP_ADDR] <= overwrite_sp;
-		registers[PC_ADDR] <= overwrite_pc;
+		if (write_enable) begin
+			registers[write_addr] <= write_data;
+		end
 	end
 end
 
