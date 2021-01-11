@@ -1,0 +1,8 @@
+# preprocessed hypercpu assembly files
+*.hs
+
+# logisim rom
+*.dat
+
+*.verilog_trenary
+*.array.c

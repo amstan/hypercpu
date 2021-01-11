@@ -304,7 +304,7 @@ def main(args):
 		output("1")
 	if args.output_type == "c_array":
 		if args.output_variable_name is None:
-			args.output_variable_name = args.input_files[0].name.split(".")[0]
+			args.output_variable_name = args.input_files[0].name.split("/")[-1].split(".")[0]
 		output(f"const int {args.output_variable_name}[{len(output_words)}] = {{")
 		for address, word in enumerate(output_words):
 			output(f"\t{word:#010x},", end="")
@@ -320,7 +320,7 @@ def main(args):
 if __name__=="__main__":
 	p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
-	p.add_argument("input_files", nargs='+', type=argparse.FileType('r'), help="input .s assembly files")
+	p.add_argument("input_files", nargs='+', type=argparse.FileType('r'), help="input .hs assembly files")
 	p.add_argument("--output", type=argparse.FileType('w'), help="output files", default="/dev/stdout")
 	p.add_argument("--output_type", choices=["asm", "verilog_trenary", "logisim", "c_array"], default="asm")
 	p.add_argument("--output_offset", type=eval, default=0, help="the starting address of the output")
