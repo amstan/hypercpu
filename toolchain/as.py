@@ -305,7 +305,7 @@ def main(args):
 	if args.output_type == "c_array":
 		if args.output_variable_name is None:
 			args.output_variable_name = args.input_files[0].name.split("/")[-1].split(".")[0]
-		output(f"const int {args.output_variable_name}[{len(output_words)}] = {{")
+		output(f"const unsigned int {args.output_variable_name}[{len(output_words)}] = {{")
 		for address, word in enumerate(output_words):
 			output(f"\t{word:#010x},", end="")
 			if output_comments[address]:

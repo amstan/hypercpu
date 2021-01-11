@@ -30,6 +30,19 @@ all: tests
 .PHONY: tests
 tests: $(patsubst test/%.cpp,test_%,$(wildcard test/*.cpp))
 
+build/test_hypercpu: build/hypercpu_example_program.array.c
+build/hypercpu_example_program.array.c:
+	make -f ../toolchain/Makefile ../programs/example.array.c
+	-mkdir build
+	cp ../programs/example.array.c $@
+
+# TODO: whenever building for hardware happens in the makefile this target needs to change:
+#build/Vhypercpu__ALL.a: build/rom.verilog_trenary
+build/rom.verilog_trenary:
+	make -f ../toolchain/Makefile ../programs/example.verilog_trenary
+	-mkdir build
+	cp ../programs/example.verilog_trenary $@
+
 .PHONY: clean
 clean:
 	-rm -rf build/

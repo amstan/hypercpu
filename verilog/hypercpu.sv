@@ -100,7 +100,4 @@ wire is_store = opcode[7:5] == 3'b101;
 assign mem_write = b;
 assign mem_write_enable = is_store;
 
-// Attachments to the memory bus
-hypercpu_rom hypercpu_rom(.mem_addr(mem_addr[23:0]), .mem_read(mem_read), .mem_read_enabled(mem_addr[31:24] == 8'h00));
-
 endmodule

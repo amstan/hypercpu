@@ -3,6 +3,8 @@
 #include "verilated.h"
 #include "Vhypercpu.h"
 
+#include "hypercpu_example_program.array.c"
+
 #define REG_COUNT 16
 #define SP_ADDR (REG_COUNT - 2)
 #define PC_ADDR (REG_COUNT - 1)
@@ -40,6 +42,21 @@ void status(Vhypercpu *tb, char clk_instruction_or_mem) {
 	print_registers(tb, /*header=*/ 0);
 }
 
+void talk_on_mem_bus(Vhypercpu *tb) {
+	// tb->mem_write_enable
+	// tb->mem_write
+
+	// Emulate Hiz
+	tb->mem_read = 0x0BADBEEF;
+
+	// ROM emulation
+	if (tb->mem_addr < (sizeof(program) / sizeof(*program))) {
+		tb->mem_read = program[tb->mem_addr];
+	}
+
+// 	printf("mem is asking %08x, we're returning %08x\n", tb->mem_addr, tb->mem_read);
+}
+
 int main(int argc, char **argv) {
 	Verilated::commandArgs(argc, argv);
 	Vhypercpu *tb = new Vhypercpu;
@@ -54,12 +71,20 @@ int main(int argc, char **argv) {
 	    /*header_prefix=*/ "C mem_addr mem_data instruct ");
 	for(int i = 0; i < 20; i++) {
 		tb->eval();
+		talk_on_mem_bus(tb);
+		tb->eval();
 		tb->mclk = 0;
+		tb->eval();
+		talk_on_mem_bus(tb);
 		tb->eval();
 		status(tb, 'i');
 
 		tb->eval();
+		talk_on_mem_bus(tb);
+		tb->eval();
 		tb->mclk = 1;
+		tb->eval();
+		talk_on_mem_bus(tb);
 		tb->eval();
 		status(tb, 'm');
 	}

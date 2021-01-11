@@ -8,7 +8,7 @@ AS = $(TOOLCHAIN_PATH)as.py
 	cpp $< | sed "s/__NL__/\n/g" > $@
 
 %.array.c: %.hs
-	${AS} $< --output $@ --output_type c_array
+	${AS} $< --output $@ --output_type c_array --output_variable program
 
 %.verilog_trenary: %.hs
 	${AS} $< --output $@ --output_type verilog_trenary

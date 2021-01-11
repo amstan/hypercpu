@@ -187,7 +187,7 @@ wire mem_write_enable;
 hypercpu(.mem_addr(mem_addr), .mem_read(mem_read), .mem_write(mem_write), .mem_write_enable(mem_write_enable), .mclk(MCLK), .reset(1));
 
 // Attachments to the memory bus
-//hypercpu_rom(.mem_addr(mem_addr[23:0]), .mem_read(mem_read), .mem_read_enabled(mem_addr[31:24] == 8'h00));
+hypercpu_rom(.mem_addr(mem_addr[23:0]), .mem_read(mem_read), .mem_read_enabled(mem_addr[31:24] == 8'h00));
 //assign mem_addr = counter - 2;
 assign LED = mem_read;
 
