@@ -20,7 +20,7 @@ reading = mem[pInput + 0x11] # Input.Joystick.Y
 accumulator = reading + accumulator
 mem[pDisplay + 1] = accumulator # Display.Hex
 mem[pRAM + accumulator] = accumulator # fills RAM with its own address depending on accumulator
-$pc = register_with_0 + loop # goto 0x0a
+$pc = register_with_0 + loop # goto loop
 
 0x01000000 RAM:
 0x90000000 Input:

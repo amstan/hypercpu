@@ -65,8 +65,10 @@ OPCODES = {       #ccci ALU-
 	"STORE_RE":  0b1010_0000,
 	"CALL_RE":   0b1100_0000,
 	"ALU_RE":    0b1110_0000,
+	"mask":      0b1110_0000,
 	"immediate": 0b0001_0000,
 	"alutype":   0b1110_0000,
+	"alu_op":    0b0000_1111,
 }
 
 def eval_typed(s, expected_type, vars=None):
@@ -84,7 +86,9 @@ class Register():
 	}
 
 	def __init__(self, r):
-		if r.startswith("$"):
+		if isinstance(r, int):
+			self.number = r
+		elif r.startswith("$"):
 			try:
 				self.number = int(r[1:])
 			except ValueError:
@@ -120,6 +124,7 @@ class Line():
 		self.match = LINE_RE.match(self.str)
 		for k, v in self.match.groupdict().items():
 			setattr(self, k, v)
+		self.instruction = self.instruction.strip()
 		self._parse_label()
 
 	def _parse_label(self):
@@ -144,17 +149,11 @@ class Line():
 	def __str__(self):
 		return self.str
 
-def main(args):
-
+def generate_assembler_words(files, args):
 	labels = {}
 
-	def output(*args_, **kwargs):
-		print(*args_, **kwargs, file=args.output)
-	if args.output_type in ["logisim"]:
-		output_words = [0] * args.output_size
-
 	all_lines = []
-	for f in args.input_files:
+	for f in files:
 		#Register.all_aliases = {} # TODO: fix this so register aliases are not global
 		for i, line_str in enumerate(f.readlines()):
 			all_lines.append(Line(i, line_str, f))
@@ -235,21 +234,86 @@ def main(args):
 
 		if line.instruction:
 			assert (ow is not None), f"Instruction not null{line.instruction!r} should mean we have an ow"
-			if args.output_type == "asm":
-				output(f"{address:#010x}: .word {ow:#010x} # {output_comment}")
-			if args.output_type == "verilog_trenary":
-				output(f"(mem_addr == 32'h_{address:08x}) ? 32'h_{ow:08x} : // {output_comment}")
-			if args.output_type in ["logisim"]:
-				output_words[address - args.output_offset] = ow
-
+			yield (address, ow, output_comment)
 			address += 1
+
+def disassemble(word):
+	disassembled = f".word {word:#010x}"
+
+	try:
+		opcode = word >> 24
+		a = Register((word >> 20) & 0xf)
+		b = Register((word >> 16) & 0xf)
+		immediate = word & 0xffff
+		is_immediate = bool(opcode & OPCODES["immediate"])
+
+		if alu_type := opcode & OPCODES["mask"]:
+			opcode_type = next(name for name, bits in OPCODES.items() if bits == alu_type)
+
+			alu_op_number = opcode & OPCODES["alu_op"]
+			alu_op = next(name for name, bits in ALU_OPS.items() if bits == alu_op_number)
+			alu_b = f"{immediate:#04x}" if is_immediate else b
+			alu_expression = f"{a} {alu_op} {alu_b}"
+			if alu_op in SINGLE_TERM_ALUOPS:
+				alu_expression = f"{alu_op}{a}"
+
+			disassembled = f"{opcode_type} {alu_expression}"
+			if opcode_type == "ALU_RE":
+				disassembled = f"{b} = {alu_expression}"
+			if opcode_type == "LOAD_RE":
+				disassembled = f"{b} = mem[{alu_expression}]"
+			if opcode_type == "STORE_RE":
+				disassembled = f"mem[{alu_expression}] = {b}"
+	except StopIteration:
+		# we probably couldn't find something
+		return disassembled
+	return disassembled
+
+
+def main(args):
+	def output(*args_, **kwargs):
+		print(*args_, **kwargs, file=args.output)
+	output_words = [0] * args.output_min_size
+	output_comments = {} # address: comment
+
+	for address, ow, output_comment in generate_assembler_words(args.input_files, args):
+		# sparse outputs
+		if args.output_type == "asm":
+			asm_line = f"{address:#010x}: .word {ow:#010x} # {output_comment}"
+			if args.disassemble:
+				asm_line = f"{address:#010x}: {disassemble(ow):30}# {output_comment}"
+			output(asm_line)
+		if args.output_type == "verilog_trenary":
+			output(f"(mem_addr == 32'h_{address:08x}) ? 32'h_{ow:08x} : // {output_comment}")
+
+		# array type outputs
+		address -= args.output_offset
+		assert address >= 0, "We're trying to write before the start of the file"
+		if address == len(output_words):
+			output_words.append(ow)
+		elif address < len(output_words):
+			output_words[address - args.output_offset] = ow
+		else:
+			assert address > len(output_words)
+		output_comments[address] = output_comment
 
 	if args.output_type == "logisim":
 		output("v2.0 raw")
 		for addr, word in enumerate(output_words):
 			output(f"{word:x}", end=" \n"[addr%8==7])
 		output("1")
+	if args.output_type == "c_array":
+		if args.output_variable_name is None:
+			args.output_variable_name = args.input_files[0].name.split(".")[0]
+		output(f"const int {args.output_variable_name}[{len(output_words)}] = {{")
+		for address, word in enumerate(output_words):
+			output(f"\t{word:#010x},", end="")
+			if output_comments[address]:
+				output(f" // {output_comments[address]}", end="")
+			output()
+		output("};")
 
+		pass
 
 	globals().update(locals()) #TODO: This is for output_commentging only, remove
 
@@ -258,10 +322,16 @@ if __name__=="__main__":
 
 	p.add_argument("input_files", nargs='+', type=argparse.FileType('r'), help="input .s assembly files")
 	p.add_argument("--output", type=argparse.FileType('w'), help="output files", default="/dev/stdout")
-	p.add_argument("--output_type", choices=["asm", "verilog_trenary", "logisim"], default="asm")
+	p.add_argument("--output_type", choices=["asm", "verilog_trenary", "logisim", "c_array"], default="asm")
 	p.add_argument("--output_offset", type=eval, default=0, help="the starting address of the output")
-	p.add_argument("--output_size", type=eval, default=256)
+	p.add_argument("--output_min_size", type=eval, default=0)
+	p.add_argument("--output_variable_name")
 	p.add_argument("--comment_type", choices=["internal_state", "original_line"], default="original_line")
+	p.add_argument('--disassemble', action='store_true', help="Try to come up with original source for input .words")
 
+	args = p.parse_args()
 
-	main(p.parse_args())
+	if args.output_type == "logisim" and args.output_min_size < 256:
+		args.output_min_size = 256
+
+	main(args)
