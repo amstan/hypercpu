@@ -59,21 +59,20 @@ STORE_RE = re.compile(fr"^mem\[{ALU_EXPRESSION}\] \s* = \s* {term_re('b')}$", re
 
 ALU_RE = re.compile(fr"^{term_re('b')} \s* = \s* {ALU_EXPRESSION}$", re.X)
 
-INSTRUCTIONS_RE = [
-	"WORD_RE",
-	"LOAD_RE",
-	"STORE_RE",
-	"ALU_RE",
-]
-INSTRUCTIONS_RE = {i:eval(i) for i in INSTRUCTIONS_RE}
+INSTRUCTIONS_RE = {i:eval(i + "_RE") for i in [
+	"WORD",
+	"LOAD",
+	"STORE",
+	"ALU",
+]}
 
 OPCODES = {       #ccci ALU-
-	"BRNZ_RE":   0b0100_0000,
-	"BRZ_RE":    0b0110_0000,
-	"LOAD_RE":   0b1000_0000,
-	"STORE_RE":  0b1010_0000,
-	"CALL_RE":   0b1100_0000,
-	"ALU_RE":    0b1110_0000,
+	"BRNZ":      0b0100_0000,
+	"BRZ":       0b0110_0000,
+	"LOAD":      0b1000_0000,
+	"STORE":     0b1010_0000,
+	"CALL":      0b1100_0000,
+	"ALU":       0b1110_0000,
 	"mask":      0b1110_0000,
 	"immediate": 0b0001_0000,
 	"alutype":   0b1110_0000,
@@ -185,11 +184,11 @@ def generate_assembler_words(files, args):
 		for i_type, i_re in INSTRUCTIONS_RE.items():
 			if i_match := i_re.match(line.instruction):
 				i_dict = i_match.groupdict()
-				if i_type == "WORD_RE":
+				if i_type == "WORD":
 					ow = eval_typed(i_dict["value"], int, vars=labels)
 					output_comment = "from .word"
 
-				if i_type in ["ALU_RE", "LOAD_RE", "STORE_RE"]:
+				if i_type in ["ALU", "LOAD", "STORE"]:
 					if i_dict["single_a"]:
 						# copy groups since python doesn't let multiple groups with the same name
 						i_dict["a"] = i_dict["single_a"]
@@ -217,8 +216,6 @@ def generate_assembler_words(files, args):
 						assert b == alu_b
 						del alu_b
 
-					#print(a,b,alu_op,immediate)
-
 					alu_op_number = ALU_OPS[alu_op]
 					op_code = (
 						OPCODES[i_type] |
@@ -234,7 +231,7 @@ def generate_assembler_words(files, args):
 						immediate
 					)
 
-					output_comment = f"{i_type[:-3]}\t{a=} {b=} {alu_op=}({alu_op_number:x}) immediate:{is_immediate} {immediate:#x}"
+					output_comment = f"{i_type}\t{a=} {b=} {alu_op=}({alu_op_number:x}) immediate:{is_immediate} {immediate:#x}"
 
 				assert (ow is not None), f"Unhandled {i_type}, did not set ow"
 				break
@@ -271,11 +268,11 @@ def disassemble(word):
 				alu_expression = f"{alu_op}{a}"
 
 			disassembled = f"{opcode_type} {alu_expression}"
-			if opcode_type == "ALU_RE":
+			if opcode_type == "ALU":
 				disassembled = f"{b} = {alu_expression}"
-			if opcode_type == "LOAD_RE":
+			if opcode_type == "LOAD":
 				disassembled = f"{b} = mem[{alu_expression}]"
-			if opcode_type == "STORE_RE":
+			if opcode_type == "STORE":
 				disassembled = f"mem[{alu_expression}] = {b}"
 	except StopIteration:
 		# we probably couldn't find something
