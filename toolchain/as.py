@@ -6,14 +6,13 @@ HyperCPU Assembler
 import argparse
 import re
 
-LINE = ''.join([
-	r"(?:(?P<label>.*):)?",
-	r"(?P<instruction>(?:\w*)[^#]*)?",
-	r"(?P<comment>#.*)?",
-])
-LINE_RE = re.compile(LINE)
+LINE_RE = re.compile(r"""^
+	(?:(?P<label>[^=]*?) \s* :)? \s*
+	(?P<instruction>.*?)? \s*
+	(?P<comment>\#.*)?
+$""", re.X)
 
-WORD_RE = re.compile("\.word (?P<value>.*)")
+WORD_RE = re.compile("^\.word (?P<value>.*)$")
 
 ALU_OPS = {
 	'~':  0x0,
@@ -38,17 +37,27 @@ ALU_OPS = {
 }
 SINGLE_TERM_ALUOPS = ["~"]
 
-def re_operand(name):
-	"""Represents a register, named register or immediate."""
-	return rf"(?P<{name}>\$?[a-zA-Z0-9_]*)"
+def term_re(name):
+	"""Outputs regex for a register, named register or immediate value."""
+	return rf"(?P<{name}>\$?.*?)"
 
-ALU_OPS_GROUP = rf"(?P<alu_op>" + '|'.join(f"(:?{re.escape(op)})" for op in ALU_OPS.keys()) + ")"
-ALU_EXPRESSION = rf"(:?{re_operand('a')}?\s*{ALU_OPS_GROUP}\s*{re_operand('alu_b')})" #|(?P<single_term>s)" # TODO
+ALU_OPS_GROUP = (
+	rf"(?P<alu_op>" +
+	'|'.join(f"{re.escape(op)}"
+		for op in ALU_OPS.keys()
+			if op not in SINGLE_TERM_ALUOPS)
+	+ ")"
+)
+ALU_OPS_SINGLE_GROUP = rf"(?P<single_alu_op>{'|'.join(re.escape(op) for op in SINGLE_TERM_ALUOPS)})"
+ALU_EXPRESSION = rf"""\s* (?:
+	{term_re('a')}? \s* {ALU_OPS_GROUP} \s* {term_re('alu_b')} # a `alu_op` b
+	|{ALU_OPS_SINGLE_GROUP}? \s* {term_re('single_a')}          # `alu_op`?a
+) \s*"""
 
-LOAD_RE = re.compile(fr"{re_operand('b')}\s*=\s*mem\[{ALU_EXPRESSION}\]\s*\Z")
-STORE_RE = re.compile(fr"mem\[{ALU_EXPRESSION}\]\s*=\s*{re_operand('b')}\s*\Z")
+LOAD_RE = re.compile(fr"^{term_re('b')} \s* = \s* mem\[{ALU_EXPRESSION}\]$", re.X)
+STORE_RE = re.compile(fr"^mem\[{ALU_EXPRESSION}\] \s* = \s* {term_re('b')}$", re.X)
 
-ALU_RE = re.compile(fr"{re_operand('b')}\s*=\s*{ALU_EXPRESSION}\s*\Z")
+ALU_RE = re.compile(fr"^{term_re('b')} \s* = \s* {ALU_EXPRESSION}$", re.X)
 
 INSTRUCTIONS_RE = [
 	"WORD_RE",
@@ -115,13 +124,13 @@ class Register():
 class Line():
 	def __init__(self, line_number, line_str, file):
 		self.number = line_number
-		self.str = line_str.strip()
+		self.str = line_str.strip() # there's newlines usually
 		self.file = file
 
 		self.match = LINE_RE.match(self.str)
 		for k, v in self.match.groupdict().items():
 			setattr(self, k, v)
-		self.instruction = self.instruction.strip()
+		self.instruction = self.instruction
 		self._parse_label()
 
 	def _parse_label(self):
@@ -176,28 +185,35 @@ def generate_assembler_words(files, args):
 		for i_type, i_re in INSTRUCTIONS_RE.items():
 			if i_match := i_re.match(line.instruction):
 				i_dict = i_match.groupdict()
-				#print(line, i_type, i_dict)
 				if i_type == "WORD_RE":
 					ow = eval_typed(i_dict["value"], int, vars=labels)
 					output_comment = "from .word"
 
 				if i_type in ["ALU_RE", "LOAD_RE", "STORE_RE"]:
-					immediate = None
-					if i_dict["alu_op"] in SINGLE_TERM_ALUOPS:
-						# the regex will be a little confused since, put stuff back
-						i_dict["a"] = i_dict["alu_b"]
-						i_dict["alu_b"] = i_dict["b"]
+					if i_dict["single_a"]:
+						# copy groups since python doesn't let multiple groups with the same name
+						i_dict["a"] = i_dict["single_a"]
+						i_dict["alu_op"] = i_dict["single_alu_op"]
+						i_dict["alu_b"] = "0"
+						if not i_dict["alu_op"]:
+							# "$a" == "$a + immediate 0"
+							i_dict["alu_op"] = "+"
+
+					#print(line, i_type, i_dict)
 					a = Register(i_dict["a"])
 					b = Register(i_dict["b"])
 					alu_op = i_dict["alu_op"]
 
 					try:
 						alu_b = Register(i_dict["alu_b"])
-					except ValueError: # ok, i guess it's an immediate then
+					except ValueError:
+						is_immediate = True
 						immediate = eval_typed(i_dict["alu_b"], int, vars=labels)
 						if not (0 <= immediate < 0x10000):
 							raise ValueError(f"Immediate of {immediate:#x} cannot be stored in 16 bits") from None
 					else:
+						is_immediate = False
+						immediate = 0
 						assert b == alu_b
 						del alu_b
 
@@ -206,7 +222,7 @@ def generate_assembler_words(files, args):
 					alu_op_number = ALU_OPS[alu_op]
 					op_code = (
 						OPCODES[i_type] |
-						(OPCODES["immediate"] if (immediate is not None) else 0) |
+						(OPCODES["immediate"] * is_immediate) |
 						alu_op_number
 					)
 					ow = (
@@ -215,10 +231,10 @@ def generate_assembler_words(files, args):
 						a.number << 20 |
 						b.number << 16 |
 
-						(immediate if (immediate is not None) else 0)
+						immediate
 					)
 
-					output_comment = f"{i_type[:-3]}\t{a=} {b=} {alu_op=}({alu_op_number:x}) {immediate=}"
+					output_comment = f"{i_type[:-3]}\t{a=} {b=} {alu_op=}({alu_op_number:x}) immediate:{is_immediate} {immediate:#x}"
 
 				assert (ow is not None), f"Unhandled {i_type}, did not set ow"
 				break
