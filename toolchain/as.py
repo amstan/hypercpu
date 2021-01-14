@@ -89,16 +89,13 @@ class Register():
 		if isinstance(r, int):
 			self.number = r
 		elif r.startswith("$"):
-			try:
-				self.number = int(r[1:])
-			except ValueError:
-				try:
-					self.number = int(r[1:], 16)
-				except ValueError:
-					try:
-						self.number = self.SPECIAL_NAMES[r[1:].lower()]
-					except KeyError:
-						pass
+			r_ = r[1:]
+			if r_.isdigit():
+				self.number = int(r_)
+			elif r_ in "abcdef":
+				self.number = int(r_, 16)
+			elif (lowered := r_.lower()) in self.SPECIAL_NAMES:
+				self.number = self.SPECIAL_NAMES[lowered]
 		if self.number is None:
 			raise ValueError(f"Unknown register {r!r}.")
 
@@ -266,7 +263,7 @@ def disassemble(word):
 				disassembled = f"mem[{alu_expression}] = {b}"
 	except StopIteration:
 		# we probably couldn't find something
-		return disassembled
+		pass
 	return disassembled
 
 
