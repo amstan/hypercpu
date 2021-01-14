@@ -5,6 +5,16 @@ HyperCPU Assembler
 
 import argparse
 import re
+import sys
+
+class AssemblyError(Exception):
+	pass
+
+class ArchitectureLimitation(AssemblyError):
+	pass
+
+class AssemblyValueError(AssemblyError, ValueError):
+	pass
 
 LINE_RE = re.compile(r"""^
 	(?:(?P<label>[^=]*?) \s* :)? \s*
@@ -37,9 +47,12 @@ ALU_OPS = {
 }
 SINGLE_TERM_ALUOPS = ["~"]
 
-def term_re(name):
+def reg_re(name="b"):
+	"""Outputs regex for a register or named register only. Most likely for b."""
+	return rf"(?P<{name}>\$?\w+?)"
+def term_re(name, register_only=False):
 	"""Outputs regex for a register, named register or immediate value."""
-	return rf"(?P<{name}>\$?.*?)"
+	return rf"(?P<{name}>.+?)"
 
 ALU_OPS_GROUP = (
 	rf"(?P<alu_op>" +
@@ -48,16 +61,17 @@ ALU_OPS_GROUP = (
 			if op not in SINGLE_TERM_ALUOPS)
 	+ ")"
 )
+ALU_OPS_GROUP_RE = re.compile(ALU_OPS_GROUP, re.X)
 ALU_OPS_SINGLE_GROUP = rf"(?P<single_alu_op>{'|'.join(re.escape(op) for op in SINGLE_TERM_ALUOPS)})"
-ALU_EXPRESSION = rf"""\s* (?:
+ALU_EXPRESSION = rf"""\s* (?P<alu_expression>
 	{term_re('a')}? \s* {ALU_OPS_GROUP} \s* {term_re('alu_b')} # a `alu_op` b
 	|{ALU_OPS_SINGLE_GROUP}? \s* {term_re('single_a')}          # `alu_op`?a
 ) \s*"""
 
-LOAD_RE = re.compile(fr"^{term_re('b')} \s* = \s* mem\[{ALU_EXPRESSION}\]$", re.X)
-STORE_RE = re.compile(fr"^mem\[{ALU_EXPRESSION}\] \s* = \s* {term_re('b')}$", re.X)
+LOAD_RE = re.compile(fr"^{reg_re()} \s* = \s* mem\[{ALU_EXPRESSION}\]$", re.X)
+STORE_RE = re.compile(fr"^mem\[{ALU_EXPRESSION}\] \s* = \s* {reg_re()}$", re.X)
 
-ALU_RE = re.compile(fr"^{term_re('b')} \s* = \s* {ALU_EXPRESSION}$", re.X)
+ALU_RE = re.compile(fr"^{reg_re()} \s* = \s* {ALU_EXPRESSION}$", re.X)
 
 INSTRUCTIONS_RE = {i:eval(i + "_RE") for i in [
 	"WORD",
@@ -105,10 +119,10 @@ class Register():
 			elif (lowered := r_.lower()) in self.SPECIAL_NAMES:
 				self.number = self.SPECIAL_NAMES[lowered]
 		if self.number is None:
-			raise ValueError(f"Unknown register {r!r}.")
+			raise AssemblyValueError(f"Unknown register {r!r}.")
 
 		if not (0 <= self.number < 16):
-			raise ValueError(f"Do not have a register {self.number:#x}.")
+			raise AssemblyValueError(f"Do not have a register {self.number:#x}.")
 
 	def __repr__(self):
 		try:
@@ -181,63 +195,75 @@ def generate_assembler_words(files, args):
 		if line.new_address is not None:
 			address = line.new_address
 
-		for i_type, i_re in INSTRUCTIONS_RE.items():
-			if i_match := i_re.match(line.instruction):
-				i_dict = i_match.groupdict()
-				if i_type == "WORD":
-					ow = eval_typed(i_dict["value"], int, vars=labels)
-					output_comment = "from .word"
+		try:
+			for i_type, i_re in INSTRUCTIONS_RE.items():
+				if i_match := i_re.match(line.instruction):
+					i_dict = i_match.groupdict()
+					if i_type == "WORD":
+						ow = eval_typed(i_dict["value"], int, vars=labels)
+						output_comment = "from .word"
 
-				if i_type in ["ALU", "LOAD", "STORE"]:
-					if i_dict["single_a"]:
-						# copy groups since python doesn't let multiple groups with the same name
-						i_dict["a"] = i_dict["single_a"]
-						i_dict["alu_op"] = i_dict["single_alu_op"]
-						i_dict["alu_b"] = "0"
-						if not i_dict["alu_op"]:
-							# "$a" == "$a + immediate 0"
-							i_dict["alu_op"] = "+"
+					if i_type in ["ALU", "LOAD", "STORE"]:
+						if i_dict["single_a"]:
+							# copy groups since python doesn't let multiple groups with the same name
+							i_dict["a"] = i_dict["single_a"]
+							i_dict["alu_op"] = i_dict["single_alu_op"]
+							i_dict["alu_b"] = "0"
+							if not i_dict["alu_op"]:
+								# "$a" == "$a + immediate 0"
+								i_dict["alu_op"] = "+"
 
-					#print(line, i_type, i_dict)
-					a = Register(i_dict["a"])
-					b = Register(i_dict["b"])
-					alu_op = i_dict["alu_op"]
+						#print(line, i_type, i_dict)
+						a = Register(i_dict["a"])
+						b = Register(i_dict["b"])
+						alu_op = i_dict["alu_op"]
 
-					try:
-						alu_b = Register(i_dict["alu_b"])
-					except ValueError:
-						is_immediate = True
-						immediate = eval_typed(i_dict["alu_b"], int, vars=labels)
-						if not (0 <= immediate < 0x10000):
-							raise ValueError(f"Immediate of {immediate:#x} cannot be stored in 16 bits") from None
-					else:
-						is_immediate = False
-						immediate = 0
-						assert b == alu_b
-						del alu_b
+						try:
+							alu_b = Register(i_dict["alu_b"])
+						except ValueError:
+							is_immediate = True
+							immediate = i_dict["alu_b"]
+							#if immediate[0]!="(" and ALU_OPS_GROUP_RE.findall(immediate):
+								#raise AssemblyError(f"Evaluated {immediate=!r} should have () around it to not confuse order of operations with alu_op={i_dict['alu_op']!r}")
+							immediate = eval_typed(immediate, int, vars=labels)
+							if not (0 <= immediate < 0x10000):
+								raise AssemblyValueError(f"Immediate of {immediate:#x} cannot be stored in 16 bits")
+						else:
+							is_immediate = False
+							immediate = 0
 
-					alu_op_number = ALU_OPS[alu_op]
-					op_code = (
-						OPCODES[i_type] |
-						(OPCODES["immediate"] * is_immediate) |
-						alu_op_number
-					)
-					ow = (
-						op_code << 24 |
+							if b != alu_b:
+								raise ArchitectureLimitation(f"{b=} has to be {alu_b=}")
+							del alu_b
 
-						a.number << 20 |
-						b.number << 16 |
+						alu_op_number = ALU_OPS[alu_op]
+						op_code = (
+							OPCODES[i_type] |
+							(OPCODES["immediate"] * is_immediate) |
+							alu_op_number
+						)
+						ow = (
+							op_code << 24 |
 
-						immediate
-					)
+							a.number << 20 |
+							b.number << 16 |
 
-					output_comment = f"{i_type}\t{a=} {b=} {alu_op=}({alu_op_number:x}) immediate:{is_immediate} {immediate:#x}"
+							immediate
+						)
 
-				assert (ow is not None), f"Unhandled {i_type}, did not set ow"
-				break
-		else:
-			if line.instruction:
-				raise Exception(f"Unknown instruction {line.instruction!r}")
+						output_comment = f"{i_type}\t{a=} {b=} {alu_op=}({alu_op_number:x}) immediate:{is_immediate} {immediate:#x}"
+
+					assert (ow is not None), f"Unhandled {i_type}, did not set ow"
+					break
+			else:
+				if line.instruction:
+					raise AssemblyError(f"Did not recognize instruction.")
+		except AssemblyError as e:
+			print("Assembly Error")
+			print(f"  File {line.file.name!r}, line {line.number}")
+			print(f"    {line}")
+			print(f"  {e.__class__.__name__}: {e}")
+			sys.exit(1)
 
 		if args.comment_type == "original_line":
 			output_comment = line
