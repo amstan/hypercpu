@@ -73,7 +73,20 @@ STORE_RE = re.compile(fr"^mem\[{ALU_EXPRESSION}\] \s* = \s* {reg_re()}$", re.X)
 
 ALU_RE = re.compile(fr"^{reg_re()} \s* = \s* {ALU_EXPRESSION}$", re.X)
 
+BR_RE = re.compile(fr"""^
+	if (?:\s+|\()
+			(?P<br_negate>!|not)? \s*
+			{reg_re()} \s*
+		\)?
+	\s* (?:
+		  goto|
+		  {term_re("br_pc")} \s* =
+		) \s*
+	{ALU_EXPRESSION}
+$""", re.X)
+
 INSTRUCTIONS_RE = {i:eval(i + "_RE") for i in [
+	"BR",
 	"WORD",
 	"LOAD",
 	"STORE",
@@ -203,7 +216,7 @@ def generate_assembler_words(files, args):
 						ow = eval_typed(i_dict["value"], int, vars=labels)
 						output_comment = "from .word"
 
-					if i_type in ["ALU", "LOAD", "STORE"]:
+					if i_type in ["ALU", "LOAD", "STORE", "BR"]:
 						if i_dict["single_a"]:
 							# copy groups since python doesn't let multiple groups with the same name
 							i_dict["a"] = i_dict["single_a"]
@@ -235,6 +248,14 @@ def generate_assembler_words(files, args):
 							if b != alu_b:
 								raise ArchitectureLimitation(f"{b=} has to be {alu_b=}")
 							del alu_b
+
+						if i_type == "BR":
+							if not i_dict["br_negate"]:
+								i_type = "BRNZ"
+							else:
+								i_type = "BRZ"
+							if i_dict["br_pc"] not in [None, "$pc"]:
+								raise ArchitectureLimitation(f"When doing a branch LHS of ALU expression must be '$pc', not '{i_dict['br_pc']}'.")
 
 						alu_op_number = ALU_OPS[alu_op]
 						op_code = (
@@ -300,6 +321,9 @@ def disassemble(word):
 				disassembled = f"{b} = mem[{alu_expression}]"
 			if opcode_type == "STORE":
 				disassembled = f"mem[{alu_expression}] = {b}"
+			if opcode_type.startswith("BR"):
+				negate = "!" if opcode_type == "BRZ" else ""
+				disassembled = f"if ({negate}{b}) $pc = {alu_expression}"
 	except StopIteration:
 		# we probably couldn't find something
 		pass
