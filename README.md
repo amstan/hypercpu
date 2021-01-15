@@ -14,18 +14,18 @@ Falling - save to memory, write registers, increment pc, load new instruction, d
 ## Instructions
 ```
 .... .... ........ ........ ........
-oooo oooo AAAABBBB iiiiiiii iiiiiiii
+oooo oooo AAAABBBB ±iiiiiii iiiiiiii
 ccci ALU- opcode subparts(sometimes applicable)
 
 o - opcode
 A - address for register A
 B - address for register B
-i - misc immediate data
+±i - misc immediate data (this is sign extended from 16 bit to 32 bit)
 ```
 
 ### Following subparts of the opcode sometimes applicable:
 
-* i - replace B with immediate data for ALU input
+* i - replace B with immediate data for ALU input (remember the sign extension)
 * ccc, rest of the code:
 	* 0b00x - reserved
 	*

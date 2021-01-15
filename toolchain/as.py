@@ -226,6 +226,19 @@ def generate_assembler_words(files, args):
 								i_dict["a"] = i_dict["single"]
 								i_dict["alu_op"] = "+"
 								i_dict["alu_b"] = "0"
+							try:
+								Register(i_dict["single"])
+							except ValueError:
+								# the user might have wanted the alu expression to return just the immediate (as i_dict["single"])
+								# we have no such alu operation
+								# but hack this by using ~alu_b operation with immediate
+								immediate = eval_typed(i_dict["single"], int, vars=labels)
+								if not (0 <= immediate < 0x10000):
+									raise AssemblyValueError(f"Immediate of {immediate:#x} cannot be stored in 16 bits of assignment")
+								immediate = immediate ^ 0xffff # invert it at compile time, the alu will invert it back using ~
+								i_dict["alu_op"] = "~"
+								i_dict["alu_b"] = str(immediate)
+								i_dict["a"] = 0 # unused since it's single term
 
 						#print(line, i_type, i_dict)
 						a = Register(i_dict["a"])
@@ -295,6 +308,14 @@ def generate_assembler_words(files, args):
 			yield (address, ow, output_comment)
 			address += 1
 
+def sign_extend(x, from_bits=16, to_bits=32):
+	x &= (1 << from_bits) - 1 # make sure we're cropped to from bits
+	from_sign_bit_mask = (1<<(from_bits-1))
+	sign_bit = bool(x & from_sign_bit_mask)
+	leftover_bits_mask = from_sign_bit_mask - 1
+	new_sign_mask = ((1 << to_bits) - 1) - (leftover_bits_mask - 1)
+	return x | (sign_bit * new_sign_mask)
+
 def disassemble(word):
 	disassembled = f".word {word:#010x}"
 
@@ -302,7 +323,7 @@ def disassemble(word):
 		opcode = word >> 24
 		a = Register((word >> 20) & 0xf)
 		b = Register((word >> 16) & 0xf)
-		immediate = word & 0xffff
+		immediate = sign_extend(word & 0xffff)
 		is_immediate = bool(opcode & OPCODES["immediate"])
 
 		if alu_type := opcode & OPCODES["mask"]:
@@ -314,6 +335,10 @@ def disassemble(word):
 			alu_expression = f"{a} {alu_op} {alu_b}"
 			if alu_op in SINGLE_TERM_ALUOPS:
 				alu_expression = f"{alu_op}{alu_b}"
+				if is_immediate and alu_op == "~":
+					# we can clean this up, no need to make the user calculate this
+					immediate = sign_extend(immediate ^ 0xffff) # invert
+					alu_expression = f"{immediate:#04x}"
 
 			disassembled = f"{opcode_type} {alu_expression}"
 			if opcode_type == "ALU":

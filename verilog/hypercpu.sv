@@ -18,7 +18,7 @@ reg[31:0] instruction;
 wire[7:0] opcode = instruction[31:24];
 wire[3:0] a_addr = instruction[23:20];
 wire[3:0] b_addr = instruction[19:16];
-wire[15:0] immediate = instruction[15:0]; // TODO: this should be signed, and later on extended to 32 bit when it goes into the ALU
+wire[15:0] immediate = instruction[15:0];
 
 // Registers
 // The values of the 2 registers that the instruction pertains to
@@ -60,7 +60,7 @@ hypercpu_registers hypercpu_registers(
 wire[31:0] alu_result;
 // verilator lint_restore
 
-hypercpu_alu hypercpu_alu(.a(a), .b(opcode[4] ? immediate : b), .op(opcode[3:0]), .r(alu_result));
+hypercpu_alu hypercpu_alu(.a(a), .b(opcode[4] ? 32'(signed'(immediate)) : b), .op(opcode[3:0]), .r(alu_result));
 // Maybe this is it and we just want to put it in a register:
 wire alu_result_to_reg = opcode[7:5] == 3'b111;
 assign reg_write_data = alu_result_to_reg ? alu_result : 32'bZ;
