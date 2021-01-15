@@ -625,7 +625,6 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(1040,200)" to="(1050,200)"/>
     <wire from="(990,470)" to="(1000,470)"/>
     <wire from="(890,450)" to="(900,450)"/>
-    <wire from="(690,410)" to="(700,410)"/>
     <wire from="(750,470)" to="(760,470)"/>
     <wire from="(970,460)" to="(970,470)"/>
     <wire from="(870,40)" to="(870,50)"/>
@@ -714,6 +713,7 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(110,70)" to="(110,90)"/>
     <wire from="(250,210)" to="(250,230)"/>
     <wire from="(360,320)" to="(360,350)"/>
+    <wire from="(700,420)" to="(700,440)"/>
     <wire from="(750,470)" to="(750,490)"/>
     <wire from="(940,450)" to="(960,450)"/>
     <wire from="(970,480)" to="(990,480)"/>
@@ -751,6 +751,7 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(800,40)" to="(870,40)"/>
     <wire from="(100,150)" to="(110,150)"/>
     <wire from="(140,340)" to="(210,340)"/>
+    <wire from="(690,420)" to="(700,420)"/>
     <wire from="(740,70)" to="(750,70)"/>
     <wire from="(570,300)" to="(580,300)"/>
     <wire from="(1070,490)" to="(1070,510)"/>
@@ -784,7 +785,6 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(180,610)" to="(180,620)"/>
     <wire from="(270,380)" to="(270,400)"/>
     <wire from="(90,350)" to="(200,350)"/>
-    <wire from="(700,410)" to="(700,440)"/>
     <wire from="(90,600)" to="(90,620)"/>
     <wire from="(1050,50)" to="(1090,50)"/>
     <wire from="(220,410)" to="(220,430)"/>
@@ -1099,8 +1099,8 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="dataWidth" val="32"/>
       <a name="contents">addr/data: 24 32
 f001ffff 9cf80002 fcff0002 1000000 9cf90002 fcff0002 90000000 9cfa0002
-fcff0002 a0000000 9c900011 ec010000 bca10001 ac810000 f00ffff5 241*0
-1
+fcff0002 a0000000 9c900011 ec010000 bca10001 ac810000 9cf20002 fcff0002
+1000 e5120000 7002ffeb f00ffff5 236*0 1
 </a>
     </comp>
     <comp lib="6" loc="(737,339)" name="Text">

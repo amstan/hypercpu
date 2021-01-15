@@ -94,8 +94,8 @@ INSTRUCTIONS_RE = {i:eval(i + "_RE") for i in [
 ]}
 
 OPCODES = {       #ccci ALU-
-	"BRNZ":      0b0100_0000,
-	"BRZ":       0b0110_0000,
+	"BRZ":       0b0100_0000,
+	"BRNZ":      0b0110_0000,
 	"LOAD":      0b1000_0000,
 	"STORE":     0b1010_0000,
 	"CALL":      0b1100_0000,

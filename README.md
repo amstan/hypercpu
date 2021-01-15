@@ -55,8 +55,8 @@ opcode name   misc     side effect
 0b00100000 - TOGGLE,toggle_bit(B,A);
 0b00100001 - TEST,  B=test_bit(B,A);
 
-0b010iALUO - BRNZ,  if(B)  pc=A `ALUO` x;
-0b011iALUO - BRZ,   if(!B) pc=A `ALUO` x;
+0b010iALUO - BRZ,   if(!B) pc=A `ALUO` x;
+0b011iALUO - BRNZ,  if(B)  pc=A `ALUO` x;
 
 0b100iALUO - LOAD,  B=memory[A`ALUO`x];
 0b101iALUO - STORE, memory[A`ALUO`x]=B;

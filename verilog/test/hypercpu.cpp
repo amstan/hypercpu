@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 	print_registers(tb, /*header=*/ 1,
 	           /*prefix=*/ "                    CAabiiii ",
 	    /*header_prefix=*/ "C mem_addr mem_data instruct ");
-	for(int i = 0; i < 20; i++) {
+	for(int i = 0; i < 100; i++) {
 		tb->eval();
 		talk_on_mem_bus(tb);
 		tb->eval();

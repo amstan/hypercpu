@@ -67,13 +67,10 @@ assign reg_write_data = alu_result_to_reg ? alu_result : 32'bZ;
 //assign reg_write_enable = alu_result_to_reg;
 
 // Program flow
-assign next_pc = pc + 1;
-// verilator lint_save
-// verilator lint_off UNUSED
-wire is_br = opcode[7:6] == 2'b01;
-wire br_on_true = opcode[5]; // 0 == BRNZ, 1 = BRZ
-// TODO: Implement BR
-// verilator lint_restore
+wire is_br_instruction = opcode[7:6] == 2'b01;
+wire should_we_branch = (opcode[5] == (!!b));
+wire branch_now = is_br_instruction && should_we_branch;
+assign next_pc = branch_now ? alu_result : pc + 1;
 
 // Memory
 // Multiplexing to do both instruction loading and memory reads into registers
