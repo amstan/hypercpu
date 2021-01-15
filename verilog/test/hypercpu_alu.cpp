@@ -38,7 +38,7 @@
 void print_output(Vhypercpu_alu *tb, bool header = 1) {
 	if (header) {
 		printf("       a        b ");
-		#define DO_SINGLE(num, c_op) printf("%*c%sa ", 8-1-strlen(#c_op),' ', #c_op);
+		#define DO_SINGLE(num, c_op) printf("%*c%sb ", 8-1-strlen(#c_op),' ', #c_op);
 		#define DO(num, c_op) printf("%*ca%sb ", 8-2-strlen(#c_op),' ', #c_op);
 		DO_ALL_OPS();
 		#undef DO_SINGLE
@@ -61,7 +61,7 @@ void print_output(Vhypercpu_alu *tb, bool header = 1) {
 int check_against_c(Vhypercpu_alu *tb) {
 	unsigned int c_result;
 	#define ALU(num, c_op) tb->op = num; tb->eval();
-	#define DO_SINGLE(num, c_op) ALU(num, c_op); c_result = c_op tb->a; CHECK(num, c_op);
+	#define DO_SINGLE(num, c_op) ALU(num, c_op); c_result = c_op tb->b; CHECK(num, c_op);
 	#define DO(num, c_op) ALU(num, c_op); c_result = tb->a c_op tb->b; CHECK(num, c_op);
 	#define CHECK(num, c_op) if (tb->r != c_result) {printf("Result for %s op#%d, a=%x, b=%x differs: C=%x Verilog=%x\n", #c_op, num, tb->a, tb->b, c_result, tb->r); return 1;}
 	DO_ALL_OPS();

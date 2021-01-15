@@ -11,7 +11,7 @@ module hypercpu_alu(
 );
 
 assign r =
-	(op == 4'h_0) ? ~a :
+	(op == 4'h_0) ? ~b :
 	(op == 4'h_1) ? a & b :
 	(op == 4'h_2) ? a | b :
 	(op == 4'h_3) ? a ^ b :

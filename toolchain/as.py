@@ -65,7 +65,7 @@ ALU_OPS_GROUP_RE = re.compile(ALU_OPS_GROUP, re.X)
 ALU_OPS_SINGLE_GROUP = rf"(?P<single_alu_op>{'|'.join(re.escape(op) for op in SINGLE_TERM_ALUOPS)})"
 ALU_EXPRESSION = rf"""\s* (?P<alu_expression>
 	{term_re('a')}? \s* {ALU_OPS_GROUP} \s* {term_re('alu_b')} # a `alu_op` b
-	|{ALU_OPS_SINGLE_GROUP}? \s* {term_re('single_a')}          # `alu_op`?a
+	|{ALU_OPS_SINGLE_GROUP}? \s* {term_re('single')}           # `alu_op`?single
 ) \s*"""
 
 LOAD_RE = re.compile(fr"^{reg_re()} \s* = \s* mem\[{ALU_EXPRESSION}\]$", re.X)
@@ -217,14 +217,15 @@ def generate_assembler_words(files, args):
 						output_comment = "from .word"
 
 					if i_type in ["ALU", "LOAD", "STORE", "BR"]:
-						if i_dict["single_a"]:
-							# copy groups since python doesn't let multiple groups with the same name
-							i_dict["a"] = i_dict["single_a"]
-							i_dict["alu_op"] = i_dict["single_alu_op"]
-							i_dict["alu_b"] = "0"
-							if not i_dict["alu_op"]:
-								# "$a" == "$a + immediate 0"
+						if i_dict["single"]:
+							if i_dict["single_alu_op"]: # `alu_op`b
+								i_dict["a"] = 0 # unused since it's single term
+								i_dict["alu_op"] = i_dict["single_alu_op"]
+								i_dict["alu_b"] = i_dict["single"]
+							else: # just a, with an implied + immediate 0
+								i_dict["a"] = i_dict["single"]
 								i_dict["alu_op"] = "+"
+								i_dict["alu_b"] = "0"
 
 						#print(line, i_type, i_dict)
 						a = Register(i_dict["a"])
@@ -312,7 +313,7 @@ def disassemble(word):
 			alu_b = f"{immediate:#04x}" if is_immediate else b
 			alu_expression = f"{a} {alu_op} {alu_b}"
 			if alu_op in SINGLE_TERM_ALUOPS:
-				alu_expression = f"{alu_op}{a}"
+				alu_expression = f"{alu_op}{alu_b}"
 
 			disassembled = f"{opcode_type} {alu_expression}"
 			if opcode_type == "ALU":
