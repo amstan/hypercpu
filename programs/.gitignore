@@ -1,5 +1,4 @@
-# preprocessed hypercpu assembly files
-*.hs
+*.s
 
 # logisim rom
 *.dat

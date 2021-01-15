@@ -4,18 +4,18 @@ TOOLCHAIN_PATH = $(MAKEFILE_PATH)
 
 AS = $(TOOLCHAIN_PATH)as.py
 
-%.hs: %.hS
+%.s: %.S
 	cpp $< | sed "s/__NL__/\n/g" > $@
 
-%.array.c: %.hs
+%.array.c: %.s
 	${AS} $< --output $@ --output_type c_array --output_variable program
 
-%.verilog_trenary: %.hs
+%.verilog_trenary: %.s
 	${AS} $< --output $@ --output_type verilog_trenary
 
-%.dat: %.hs
+%.dat: %.s
 	${AS} $< --output $@ --output_type logisim
 
 .PHONY: clean
 clean:
-	-rm -rf *.hs *.array.c *.verilog_trenary *.dat
+	-rm -rf *.s *.array.c *.verilog_trenary *.dat

@@ -31,7 +31,7 @@ all: tests
 tests: $(patsubst test/%.cpp,test_%,$(wildcard test/*.cpp))
 
 build/test_hypercpu: build/hypercpu_example_program.array.c
-build/hypercpu_example_program.array.c:
+build/hypercpu_example_program.array.c: ../programs/example.S
 	make -f ../toolchain/Makefile ../programs/example.array.c
 	-mkdir build
 	cp ../programs/example.array.c $@
