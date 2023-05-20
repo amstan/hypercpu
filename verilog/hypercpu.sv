@@ -14,7 +14,7 @@ module hypercpu(
 );
 
 // Instruction decoding
-reg[31:0] instruction;
+reg[31:0] instruction /* verilator public */;
 wire[7:0] opcode = instruction[31:24];
 wire[3:0] a_addr = instruction[23:20];
 wire[3:0] b_addr = instruction[19:16];

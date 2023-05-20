@@ -30,7 +30,7 @@ module hypercpu_registers #(
 	input reset
 );
 
-reg[31:0] registers[REG_COUNT-1:0];
+reg[31:0] registers[REG_COUNT-1:0] /*verilator public */;
 
 assign read_a_data = registers[read_a_addr];
 assign read_b_data = registers[read_b_addr];

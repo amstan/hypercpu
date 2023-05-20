@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "verilated.h"
 #include "Vhypercpu.h"
+#include "Vhypercpu_hypercpu.h"
+#include "Vhypercpu_hypercpu_registers.h"
 
 #include "hypercpu_example_program.array.c"
 
@@ -23,7 +25,7 @@ void print_registers(Vhypercpu *tb, bool header = 1, const char *prefix = "", co
 
 	printf("%s", prefix);
 	for (int r = 0; r < REG_COUNT; r++) {
-		printf("% 8x ", tb->hypercpu__DOT__hypercpu_registers__DOT__registers[r]);
+		printf("% 8x ", tb->hypercpu->hypercpu_registers->registers[r]);
 	}
 	printf("\n");
 }
@@ -38,7 +40,7 @@ void tick(Vhypercpu *tb) {
 
 void status(Vhypercpu *tb, char clk_instruction_or_mem) {
 	printf("%c ", clk_instruction_or_mem);
-	printf("%08x %8x %08x ", tb->mem_addr, tb->mem_read, tb->hypercpu__DOT__instruction);
+	printf("%08x %8x %08x ", tb->mem_addr, tb->mem_read, tb->hypercpu->instruction);
 	print_registers(tb, /*header=*/ 0);
 }
 

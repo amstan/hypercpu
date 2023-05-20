@@ -1,15 +1,23 @@
-VFLAGS ?= -Wall
+# VFLAGS ?= -Wall
 
- # These are inane, something as simple as (var == 25) ? : will warn with this on
+# These are inane, something as simple as (var == 25) ? : will warn with this on
 VFLAGS += -Wno-WIDTH
 
-build/V%__ALL.a: %.sv
-	# Generate the verilator makefile + cpp then compile it
+VFLAGS += -Wno-LATCH # please excuse my noobiness, that's how I originally implemented this processor in college
+
+build/V%__ALL.o build/V%.h: %.sv
 	verilator $(VFLAGS) -cc $*.sv --Mdir build/ --build
 
-build/test_%: build/V%__ALL.a test/%.cpp
-	# Compile the testbench together with the verilog object
-	g++ -I /usr/share/verilator/include -I build /usr/share/verilator/include/verilated.cpp test/$*.cpp build/V$*__ALL.a -o build/test_$*
+build/verilated%o: /usr/share/verilator/include/verilated%cpp
+	g++ $^ -c -o $@
+
+build/test_%.o: test/%.cpp build/V%.h
+	g++ -I /usr/share/verilator/include -I /usr/share/verilator/include/vltstd -I build $< -c -o $@
+
+VERILATOR_DEPS = build/verilated.o build/verilated_threads.o
+
+build/test_%: build/V%__ALL.o build/test_%.o $(VERILATOR_DEPS)
+	g++ $? -o build/test_$*
 
 ## More direct way of invoking
 # build/test_%: %.sv test/%.cpp
@@ -30,7 +38,7 @@ all: tests
 .PHONY: tests
 tests: $(patsubst test/%.cpp,test_%,$(wildcard test/*.cpp))
 
-build/test_hypercpu: build/hypercpu_example_program.array.c
+build/test_hypercpu.o: build/hypercpu_example_program.array.c
 build/hypercpu_example_program.array.c: ../programs/example.S
 	make -f ../toolchain/Makefile ../programs/example.array.c
 	-mkdir build
@@ -45,4 +53,4 @@ build/rom.verilog_trenary:
 
 .PHONY: clean
 clean:
-	-rm -rf build/
+	rm -rf build/*

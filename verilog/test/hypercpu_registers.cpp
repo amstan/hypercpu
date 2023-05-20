@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "verilated.h"
 #include "Vhypercpu_registers.h"
+#include "Vhypercpu_registers_hypercpu_registers.h"
 
 #define REG_COUNT 16
 #define SP_ADDR (REG_COUNT - 2)
@@ -21,7 +22,7 @@ void print_registers(Vhypercpu_registers *tb, bool header = 1, const char *prefi
 
 	printf("%s", prefix);
 	for (int r = 0; r < REG_COUNT; r++) {
-		printf("% 8x ", tb->hypercpu_registers__DOT__registers[r]);
+		printf("% 8x ", tb->hypercpu_registers->registers[r]);
 	}
 	printf("\n");
 }
